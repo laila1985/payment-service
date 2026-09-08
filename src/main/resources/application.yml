@@ -1,0 +1,16 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: payment-service
+
+grpc:
+  client:
+    account-service:
+      address: 'static://localhost:50051'
+      negotiationType: plaintext
+
+logging:
+  level:
+    com.example.payment: INFO

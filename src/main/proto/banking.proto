@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package banking;
+
+option java_multiple_files = true;
+option java_package = "com.example.banking.grpc";
+
+service AccountService {
+    rpc GetAccountBalance(AccountRequest) returns (BalanceResponse);
+    rpc ReserveFunds(ReserveRequest) returns (ReserveResponse);
+}
+
+message AccountRequest {
+    string account_id = 1;
+}
+
+message BalanceResponse {
+    string account_id = 1;
+    double balance = 2;
+    string currency = 3;
+}
+
+message ReserveRequest {
+    string account_id = 1;
+    double amount = 2;
+    string currency = 3;
+}
+
+message ReserveResponse {
+    bool success = 1;
+    string message = 2;
+    double remaining_balance = 3;
+}
