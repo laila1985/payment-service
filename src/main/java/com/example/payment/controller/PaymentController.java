@@ -5,28 +5,19 @@ import com.example.banking.grpc.ReserveResponse;
 import com.example.payment.PaymentServiceClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
-/**
- * REST controller that exposes payment endpoints.
- * Internally calls the Account Service via gRPC.
- * <p>
- * This demonstrates the "REST in, gRPC out" pattern:
- * - External clients call this controller via HTTP/JSON (REST)
- * - The controller calls the Account Service via gRPC (binary, HTTP/2)
- */
 @RestController
-@RequestMapping("/payments")
-@Tag(name = "Payments", description = "Payment operations that delegate to Account Service via gRPC")
+@RequestMapping("/api/v1/payments")
+@Tag(name = "Payment", description = "Payment management endpoints")
 public class PaymentController {
-
-    private static final Logger log = LoggerFactory.getLogger(PaymentController.class);
 
     private final PaymentServiceClient paymentServiceClient;
 
@@ -34,94 +25,108 @@ public class PaymentController {
         this.paymentServiceClient = paymentServiceClient;
     }
 
-    /**
-     * Check the balance of an account.
-     * GET /payments/balance?accountId=acc-123
-     */
-    @GetMapping("/balance")
+    @GetMapping("/balance/{accountId}")
     @Operation(
             summary = "Check account balance",
-            description = "Queries the Account Service via gRPC to retrieve the current balance and currency for a given account ID."
+            description = "Retrieves the balance information for the specified account via the gRPC account service."
     )
-    public ResponseEntity<Map<String, Object>> checkBalance(
-            @Parameter(description = "The account ID to check, e.g. acc-123, acc-456, acc-789", example = "acc-123")
-            @RequestParam String accountId) {
-        log.info("REST request: check balance for account {}", accountId);
-
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Balance retrieved successfully",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = BalanceResponseDto.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Account not found",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error",
+                    content = @Content
+            )
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BalanceResponseDto> checkBalance(
+            @Parameter(description = "Account ID to check balance for", required = true)
+            @PathVariable String accountId) {
         BalanceResponse response = paymentServiceClient.checkBalance(accountId);
         if (response == null) {
-            return ResponseEntity.status(503).body(Map.of(
-                    "error", "Account Service unavailable",
-                    "accountId", accountId
-            ));
+            return ResponseEntity.internalServerError().build();
         }
-
-        return ResponseEntity.ok(Map.of(
-                "accountId", response.getAccountId(),
-                "balance", response.getBalance(),
-                "currency", response.getCurrency()
+        return ResponseEntity.ok(new BalanceResponseDto(
+                response.getAccountId(),
+                response.getBalance(),
+                response.getCurrency()
         ));
     }
 
-    /**
-     * Reserve funds from an account.
-     * POST /payments/reserve
-     * Body: { "accountId": "acc-123", "amount": 250.0, "currency": "USD" }
-     */
     @PostMapping("/reserve")
     @Operation(
             summary = "Reserve funds from an account",
-            description = "Requests the Account Service via gRPC to reserve (deduct) funds from the specified account. "
-                    + "Returns success with remaining balance, or failure with reason (insufficient funds, currency mismatch, account not found)."
+            description = "Reserves the specified amount of funds from an account via the gRPC account service."
     )
-    public ResponseEntity<Map<String, Object>> reserveFunds(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Reserve funds request containing accountId, amount, and currency"
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Funds reserved successfully",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ReserveResponseDto.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request parameters",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error",
+                    content = @Content
             )
-            @RequestBody ReserveRequest request) {
-        log.info("REST request: reserve funds for account {}, amount {}, currency {}",
-                request.getAccountId(), request.getAmount(), request.getCurrency());
-
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ReserveResponseDto> reserveFunds(
+            @Parameter(description = "Reserve funds request details", required = true)
+            @RequestBody ReserveRequestDto request) {
         ReserveResponse response = paymentServiceClient.reserveFunds(
                 request.getAccountId(),
                 request.getAmount(),
                 request.getCurrency()
         );
-
         if (response == null) {
-            return ResponseEntity.status(503).body(Map.of(
-                    "error", "Account Service unavailable",
-                    "accountId", request.getAccountId()
-            ));
+            return ResponseEntity.internalServerError().build();
         }
-
-        if (response.getSuccess()) {
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", response.getMessage(),
-                    "remainingBalance", response.getRemainingBalance(),
-                    "accountId", request.getAccountId()
-            ));
-        } else {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", response.getMessage(),
-                    "remainingBalance", response.getRemainingBalance(),
-                    "accountId", request.getAccountId()
-            ));
-        }
+        return ResponseEntity.ok(new ReserveResponseDto(
+                response.getSuccess(),
+                response.getMessage(),
+                response.getRemainingBalance()
+        ));
     }
 
-    /**
-     * REST request DTO for reserve funds.
-     */
-    @io.swagger.v3.oas.annotations.media.Schema(description = "Request to reserve funds from an account")
-    public static class ReserveRequest {
-        @io.swagger.v3.oas.annotations.media.Schema(description = "Account ID", example = "acc-123")
+    public static class BalanceResponseDto {
         private String accountId;
-        @io.swagger.v3.oas.annotations.media.Schema(description = "Amount to reserve", example = "250.0")
+        private double balance;
+        private String currency;
+
+        public BalanceResponseDto() {}
+
+        public BalanceResponseDto(String accountId, double balance, String currency) {
+            this.accountId = accountId;
+            this.balance = balance;
+            this.currency = currency;
+        }
+
+        public String getAccountId() { return accountId; }
+        public void setAccountId(String accountId) { this.accountId = accountId; }
+        public double getBalance() { return balance; }
+        public void setBalance(double balance) { this.balance = balance; }
+        public String getCurrency() { return currency; }
+        public void setCurrency(String currency) { this.currency = currency; }
+    }
+
+    public static class ReserveRequestDto {
+        private String accountId;
         private double amount;
-        @io.swagger.v3.oas.annotations.media.Schema(description = "Currency code", example = "USD")
         private String currency;
 
         public String getAccountId() { return accountId; }
@@ -130,5 +135,26 @@ public class PaymentController {
         public void setAmount(double amount) { this.amount = amount; }
         public String getCurrency() { return currency; }
         public void setCurrency(String currency) { this.currency = currency; }
+    }
+
+    public static class ReserveResponseDto {
+        private boolean success;
+        private String message;
+        private double remainingBalance;
+
+        public ReserveResponseDto() {}
+
+        public ReserveResponseDto(boolean success, String message, double remainingBalance) {
+            this.success = success;
+            this.message = message;
+            this.remainingBalance = remainingBalance;
+        }
+
+        public boolean isSuccess() { return success; }
+        public void setSuccess(boolean success) { this.success = success; }
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+        public double getRemainingBalance() { return remainingBalance; }
+        public void setRemainingBalance(double remainingBalance) { this.remainingBalance = remainingBalance; }
     }
 }

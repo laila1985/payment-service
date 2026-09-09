@@ -60,24 +60,27 @@ class PaymentServiceClientTest {
 
     /**
      * In-memory implementation of AccountService for testing.
+     * Mirrors the business logic in AccountServiceImpl for realistic unit tests.
      */
     private static class AccountServiceImplTest extends AccountServiceGrpc.AccountServiceImplBase {
 
-        private final Map<String, double[]> accounts = new ConcurrentHashMap<>();
+        private final Map<String, AccountData> accounts = new ConcurrentHashMap<>();
+
+        private record AccountData(double balance, String currency) {}
 
         AccountServiceImplTest() {
-            accounts.put("acc-123", new double[]{1000.00});
+            accounts.put("acc-123", new AccountData(1000.00, "USD"));
         }
 
         @Override
         public void getAccountBalance(AccountRequest request, StreamObserver<BalanceResponse> responseObserver) {
-            double[] account = accounts.get(request.getAccountId());
+            AccountData account = accounts.get(request.getAccountId());
             BalanceResponse response;
             if (account != null) {
                 response = BalanceResponse.newBuilder()
                         .setAccountId(request.getAccountId())
-                        .setBalance(account[0])
-                        .setCurrency("USD")
+                        .setBalance(account.balance())
+                        .setCurrency(account.currency())
                         .build();
             } else {
                 response = BalanceResponse.newBuilder()
@@ -92,7 +95,21 @@ class PaymentServiceClientTest {
 
         @Override
         public void reserveFunds(ReserveRequest request, StreamObserver<ReserveResponse> responseObserver) {
-            double[] account = accounts.get(request.getAccountId());
+            double amount = request.getAmount();
+            String currency = request.getCurrency();
+
+            // Negative amount check
+            if (amount <= 0) {
+                responseObserver.onNext(ReserveResponse.newBuilder()
+                        .setSuccess(false)
+                        .setMessage("Amount must be positive")
+                        .setRemainingBalance(0.0)
+                        .build());
+                responseObserver.onCompleted();
+                return;
+            }
+
+            AccountData account = accounts.get(request.getAccountId());
             if (account == null) {
                 responseObserver.onNext(ReserveResponse.newBuilder()
                         .setSuccess(false)
@@ -102,20 +119,36 @@ class PaymentServiceClientTest {
                 responseObserver.onCompleted();
                 return;
             }
-            if (account[0] < request.getAmount()) {
+
+            // Currency mismatch check
+            if (!account.currency().equals(currency)) {
                 responseObserver.onNext(ReserveResponse.newBuilder()
                         .setSuccess(false)
-                        .setMessage("Insufficient funds")
-                        .setRemainingBalance(account[0])
+                        .setMessage("Currency mismatch: account currency is " + account.currency())
+                        .setRemainingBalance(account.balance())
                         .build());
                 responseObserver.onCompleted();
                 return;
             }
-            account[0] -= request.getAmount();
+
+            // Insufficient funds check
+            if (account.balance() < amount) {
+                responseObserver.onNext(ReserveResponse.newBuilder()
+                        .setSuccess(false)
+                        .setMessage("Insufficient funds")
+                        .setRemainingBalance(account.balance())
+                        .build());
+                responseObserver.onCompleted();
+                return;
+            }
+
+            double newBalance = account.balance() - amount;
+            accounts.put(request.getAccountId(), new AccountData(newBalance, account.currency()));
+
             responseObserver.onNext(ReserveResponse.newBuilder()
                     .setSuccess(true)
                     .setMessage("Funds reserved successfully")
-                    .setRemainingBalance(account[0])
+                    .setRemainingBalance(newBalance)
                     .build());
             responseObserver.onCompleted();
         }
@@ -185,5 +218,54 @@ class PaymentServiceClientTest {
         ReserveResponse response = observer.getValue();
         assertFalse(response.getSuccess());
         assertEquals("Insufficient funds", response.getMessage());
+    }
+
+    @Test
+    void testReserveFunds_currencyMismatch() throws Exception {
+        ReserveRequest request = ReserveRequest.newBuilder()
+                .setAccountId("acc-123")
+                .setAmount(100.00)
+                .setCurrency("EUR")
+                .build();
+
+        TestObserver<ReserveResponse> observer = new TestObserver<>();
+        accountService.reserveFunds(request, observer);
+
+        ReserveResponse response = observer.getValue();
+        assertFalse(response.getSuccess());
+        assertTrue(response.getMessage().contains("Currency mismatch"));
+    }
+
+    @Test
+    void testReserveFunds_accountNotFound() throws Exception {
+        ReserveRequest request = ReserveRequest.newBuilder()
+                .setAccountId("acc-999")
+                .setAmount(100.00)
+                .setCurrency("USD")
+                .build();
+
+        TestObserver<ReserveResponse> observer = new TestObserver<>();
+        accountService.reserveFunds(request, observer);
+
+        ReserveResponse response = observer.getValue();
+        assertFalse(response.getSuccess());
+        assertTrue(response.getMessage().contains("Account not found"));
+        assertEquals(0.0, response.getRemainingBalance(), 0.01);
+    }
+
+    @Test
+    void testReserveFunds_negativeAmount() throws Exception {
+        ReserveRequest request = ReserveRequest.newBuilder()
+                .setAccountId("acc-123")
+                .setAmount(-50.00)
+                .setCurrency("USD")
+                .build();
+
+        TestObserver<ReserveResponse> observer = new TestObserver<>();
+        accountService.reserveFunds(request, observer);
+
+        ReserveResponse response = observer.getValue();
+        assertFalse(response.getSuccess());
+        assertEquals("Amount must be positive", response.getMessage());
     }
 }
