@@ -3,6 +3,9 @@ package service.payment.controller;
 import com.example.banking.grpc.BalanceResponse;
 import com.example.banking.grpc.ReserveResponse;
 import service.payment.service.PaymentServiceClient;
+import service.payment.model.BalanceResponseDto;
+import service.payment.model.ReserveRequestDto;
+import service.payment.model.ReserveResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -101,60 +104,5 @@ public class PaymentController {
                 response.getMessage(),
                 response.getRemainingBalance()
         ));
-    }
-
-    public static class BalanceResponseDto {
-        private String accountId;
-        private double balance;
-        private String currency;
-
-        public BalanceResponseDto() {}
-
-        public BalanceResponseDto(String accountId, double balance, String currency) {
-            this.accountId = accountId;
-            this.balance = balance;
-            this.currency = currency;
-        }
-
-        public String getAccountId() { return accountId; }
-        public void setAccountId(String accountId) { this.accountId = accountId; }
-        public double getBalance() { return balance; }
-        public void setBalance(double balance) { this.balance = balance; }
-        public String getCurrency() { return currency; }
-        public void setCurrency(String currency) { this.currency = currency; }
-    }
-
-    public static class ReserveRequestDto {
-        private String accountId;
-        private double amount;
-        private String currency;
-
-        public String getAccountId() { return accountId; }
-        public void setAccountId(String accountId) { this.accountId = accountId; }
-        public double getAmount() { return amount; }
-        public void setAmount(double amount) { this.amount = amount; }
-        public String getCurrency() { return currency; }
-        public void setCurrency(String currency) { this.currency = currency; }
-    }
-
-    public static class ReserveResponseDto {
-        private boolean success;
-        private String message;
-        private double remainingBalance;
-
-        public ReserveResponseDto() {}
-
-        public ReserveResponseDto(boolean success, String message, double remainingBalance) {
-            this.success = success;
-            this.message = message;
-            this.remainingBalance = remainingBalance;
-        }
-
-        public boolean isSuccess() { return success; }
-        public void setSuccess(boolean success) { this.success = success; }
-        public String getMessage() { return message; }
-        public void setMessage(String message) { this.message = message; }
-        public double getRemainingBalance() { return remainingBalance; }
-        public void setRemainingBalance(double remainingBalance) { this.remainingBalance = remainingBalance; }
     }
 }
