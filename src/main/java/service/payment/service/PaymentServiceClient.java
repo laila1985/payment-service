@@ -1,4 +1,4 @@
-package com.example.payment;
+package service.payment.service;
 
 import com.example.banking.grpc.AccountRequest;
 import com.example.banking.grpc.AccountServiceGrpc;

@@ -1,8 +1,8 @@
-package com.example.payment.controller;
+package service.payment.controller;
 
 import com.example.banking.grpc.BalanceResponse;
 import com.example.banking.grpc.ReserveResponse;
-import com.example.payment.PaymentServiceClient;
+import service.payment.service.PaymentServiceClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;

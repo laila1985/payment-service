@@ -8,12 +8,12 @@ A Spring Boot 3 microservice that exposes REST APIs for payment operations, back
 ┌───────────────────┐         gRPC          ┌───────────────────┐
 │                   │  ──────────────────►   │                   │
 │  Payment Service  │     port 50051        │  Account Service   │
-│  (REST + gRPC     │                        │  (gRPC Server)     │
-│   client)         │  ◄──────────────────  │                    │
-│                   │                        │                    │
-└───────────────────┘                        └───────────────────┘
+│  (REST + gRPC     │                       │  (gRPC Server)     │
+│   client)         │  ◄──────────────────  │                   │
+│                   │                       │                   │
+└───────────────────┘                       └───────────────────┘
         │                                           │
-        │ HTTP :8085                                 │ HTTP :8088
+        │ HTTP :8070                                │ HTTP :8088
         ▼                                           ▼
    Swagger UI /                                   H2 Console /
    REST Clients                                   gRPC clients
@@ -21,14 +21,15 @@ A Spring Boot 3 microservice that exposes REST APIs for payment operations, back
 
 **Payment Service** acts as a REST gateway that translates HTTP requests into gRPC calls to the Account Service. It provides:
 
-- **REST API** (port 8085) — for external clients and Swagger UI
+- **REST API** (port 8070) — for external clients and Swagger UI
 - **gRPC Client** — communicates with Account Service on port 50051
 
 **Account Service** is the gRPC server that handles the actual business logic:
 - `GetAccountBalance` — retrieves account balance
 - `ReserveFunds` — reserves funds from an account
 
-See the [Account Service repository](https://github.com/laila1985/account-service) for more details.
+In local you can use:
+http://localhost:8070/swagger-ui/index.html#/Payment/reserveFunds
 
 ## Prerequisites
 
@@ -60,17 +61,17 @@ cd payment-service
 ```
 
 The Payment Service will start on:
-- **HTTP:** `http://localhost:8085`
+- **HTTP:** `http://localhost:8070`
 
 ## Swagger UI
 
 Once the Payment Service is running, you can access the interactive API documentation:
 
 ```
-http://localhost:8085/swagger-ui.html
+http://localhost:8070/swagger-ui.html
 ```
 
-This redirects to the full Swagger UI at `http://localhost:8085/swagger-ui/index.html`, where you can:
+This redirects to the full Swagger UI at `http://localhost:8070/swagger-ui/index.html`, where you can:
 
 - View all available REST endpoints
 - See request/response schemas
@@ -80,7 +81,7 @@ This redirects to the full Swagger UI at `http://localhost:8085/swagger-ui/index
 The OpenAPI JSON spec is also available at:
 
 ```
-http://localhost:8085/v3/api-docs
+http://localhost:8070/v3/api-docs
 ```
 
 ## REST API Endpoints
@@ -93,7 +94,7 @@ http://localhost:8085/v3/api-docs
 ### Check Balance
 
 ```bash
-curl http://localhost:8085/api/v1/payments/balance/ACC123
+curl http://localhost:8070/api/v1/payments/balance/ACC123
 ```
 
 Response:
@@ -108,7 +109,7 @@ Response:
 ### Reserve Funds
 
 ```bash
-curl -X POST http://localhost:8085/api/v1/payments/reserve \
+curl -X POST http://localhost:8070/api/v1/payments/reserve \
   -H "Content-Type: application/json" \
   -d '{"accountId": "ACC123", "amount": 100.0, "currency": "USD"}'
 ```
@@ -139,7 +140,7 @@ Key configuration in `src/main/resources/application.yml`:
 
 ```yaml
 server:
-  port: 8085                          # HTTP port
+  port: 8070                          # HTTP port
 
 grpc:
   client:

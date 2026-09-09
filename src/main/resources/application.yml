@@ -13,7 +13,7 @@ grpc:
 
 logging:
   level:
-    com.example.payment: INFO
+    service.payment: INFO
 
 # Swagger / OpenAPI UI
 springdoc:
