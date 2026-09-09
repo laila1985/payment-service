@@ -14,3 +14,10 @@ grpc:
 logging:
   level:
     com.example.payment: INFO
+
+# Swagger / OpenAPI UI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

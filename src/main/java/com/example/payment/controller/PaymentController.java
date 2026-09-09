@@ -3,6 +3,9 @@ package com.example.payment.controller;
 import com.example.banking.grpc.BalanceResponse;
 import com.example.banking.grpc.ReserveResponse;
 import com.example.payment.PaymentServiceClient;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +23,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/payments")
+@Tag(name = "Payments", description = "Payment operations that delegate to Account Service via gRPC")
 public class PaymentController {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentController.class);
@@ -35,7 +39,13 @@ public class PaymentController {
      * GET /payments/balance?accountId=acc-123
      */
     @GetMapping("/balance")
-    public ResponseEntity<Map<String, Object>> checkBalance(@RequestParam String accountId) {
+    @Operation(
+            summary = "Check account balance",
+            description = "Queries the Account Service via gRPC to retrieve the current balance and currency for a given account ID."
+    )
+    public ResponseEntity<Map<String, Object>> checkBalance(
+            @Parameter(description = "The account ID to check, e.g. acc-123, acc-456, acc-789", example = "acc-123")
+            @RequestParam String accountId) {
         log.info("REST request: check balance for account {}", accountId);
 
         BalanceResponse response = paymentServiceClient.checkBalance(accountId);
@@ -59,7 +69,16 @@ public class PaymentController {
      * Body: { "accountId": "acc-123", "amount": 250.0, "currency": "USD" }
      */
     @PostMapping("/reserve")
-    public ResponseEntity<Map<String, Object>> reserveFunds(@RequestBody ReserveRequest request) {
+    @Operation(
+            summary = "Reserve funds from an account",
+            description = "Requests the Account Service via gRPC to reserve (deduct) funds from the specified account. "
+                    + "Returns success with remaining balance, or failure with reason (insufficient funds, currency mismatch, account not found)."
+    )
+    public ResponseEntity<Map<String, Object>> reserveFunds(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Reserve funds request containing accountId, amount, and currency"
+            )
+            @RequestBody ReserveRequest request) {
         log.info("REST request: reserve funds for account {}, amount {}, currency {}",
                 request.getAccountId(), request.getAmount(), request.getCurrency());
 
@@ -96,9 +115,13 @@ public class PaymentController {
     /**
      * REST request DTO for reserve funds.
      */
+    @io.swagger.v3.oas.annotations.media.Schema(description = "Request to reserve funds from an account")
     public static class ReserveRequest {
+        @io.swagger.v3.oas.annotations.media.Schema(description = "Account ID", example = "acc-123")
         private String accountId;
+        @io.swagger.v3.oas.annotations.media.Schema(description = "Amount to reserve", example = "250.0")
         private double amount;
+        @io.swagger.v3.oas.annotations.media.Schema(description = "Currency code", example = "USD")
         private String currency;
 
         public String getAccountId() { return accountId; }

@@ -32,6 +32,9 @@ dependencies {
     // javax.annotation for generated code
     implementation 'javax.annotation:javax.annotation-api:1.3.2'
 
+    // Swagger / OpenAPI UI (like coordinator project)
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.grpc:grpc-testing'

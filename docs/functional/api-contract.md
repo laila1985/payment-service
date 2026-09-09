@@ -54,15 +54,15 @@ message ReserveResponse {
 
 When the Payment Service builds with `./gradlew build`, the protobuf plugin generates the following artifacts from `banking.proto`:
 
-| Generated Artifact | How the Payment Service Uses It |
-|---------------------|--------------------------------|
+| Generated Artifact                              | How the Payment Service Uses It                                                              |
+|-------------------------------------------------|----------------------------------------------------------------------------------------------|
 | `AccountServiceGrpc.AccountServiceBlockingStub` | **Primary client interface** — the Payment Service calls methods on this stub to invoke RPCs |
-| `AccountServiceGrpc.AccountServiceFutureStub` | Alternative async client (not used in this demo) |
-| `AccountServiceGrpc.AccountServiceStub` | Streaming client (not used in this demo) |
-| `AccountRequest` | Request message builder — used to construct the balance check request |
-| `BalanceResponse` | Response message — received from the server with balance data |
-| `ReserveRequest` | Request message builder — used to construct the fund reservation request |
-| `ReserveResponse` | Response message — received from the server with reservation result |
+| `AccountServiceGrpc.AccountServiceFutureStub`   | Alternative async client (not used in this demo)                                             |
+| `AccountServiceGrpc.AccountServiceStub`         | Streaming client (not used in this demo)                                                     |
+| `AccountRequest`                                | Request message builder — used to construct the balance check request                        |
+| `BalanceResponse`                               | Response message — received from the server with balance data                                |
+| `ReserveRequest`                                | Request message builder — used to construct the fund reservation request                     |
+| `ReserveResponse`                               | Response message — received from the server with reservation result                          |
 
 ---
 
@@ -80,9 +80,9 @@ AccountRequest request = AccountRequest.newBuilder()
     .build();
 ```
 
-| Field | Type | Description | Example |
-|-------|------|-------------|---------|
-| `account_id` | `string` | The account to query | `"acc-123"` |
+| Field        | Type     | Description          | Example      |
+|--------------|----------|----------------------|--------------|
+| `account_id` | `string` | The account to query | `"acc-123"`  |
 
 #### What the Payment Service Receives
 
@@ -90,11 +90,11 @@ AccountRequest request = AccountRequest.newBuilder()
 BalanceResponse response = stub.getAccountBalance(request);
 ```
 
-| Field | Type | Description | Example |
-|-------|------|-------------|---------|
-| `account_id` | `string` | Echo of the requested account ID | `"acc-123"` |
-| `balance` | `double` | Current account balance | `1000.00` |
-| `currency` | `string` | Account currency code | `"USD"` |
+| Field        | Type     | Description                      | Example      |
+|--------------|----------|----------------------------------|--------------|
+| `account_id` | `string` | Echo of the requested account ID | `"acc-123"`  |
+| `balance`    | `double` | Current account balance          | `1000.00`    |
+| `currency`   | `string` | Account currency code            | `"USD"`      |
 
 #### Client Decision Logic
 
